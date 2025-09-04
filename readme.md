@@ -120,4 +120,4 @@ To stop and remove all containers and volumes.
 
 ## ✍️ Author
 
-Maintained by [Thành AI].
+Maintained by [Thành AI]
