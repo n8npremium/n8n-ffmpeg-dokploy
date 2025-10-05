@@ -1,4 +1,4 @@
-# n8n Self-Hosted with Redis Queue & PostgreSQL
+# n8n Self-Hosted with Redis Queue & PostgreSQL 0.0.44
 
 This project provides a production-ready setup for running [n8n](https://n8n.io/) using Docker Compose with the following features:
 
