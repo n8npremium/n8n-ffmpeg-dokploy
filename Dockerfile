@@ -1,48 +1,41 @@
-FROM n8nio/n8n
+FROM node:18-slim
 
 USER root
 
-# Cài đặt essentials
-RUN apk add --no-cache \
-    curl \
-    bash \
+# Cài essentials
+RUN apt-get update && apt-get install -y \
     ffmpeg \
     python3 \
-    py3-pip \
-    py3-virtualenv \
-    build-base \
+    python3-venv \
+    python3-pip \
     python3-dev \
-    libffi-dev \
-    openssl-dev \
+    build-essential \
     git \
-    linux-headers \
-    musl-dev
+    && rm -rf /var/lib/apt/lists/*
 
-# Cài Rust từ rustup
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+# Tạo user node
+RUN useradd -m -s /bin/bash node && \
+    mkdir -p /home/node/.n8n && \
+    chown -R node:node /home/node
 
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Cài venv + upgrade pip
+# Tạo venv
 RUN python3 -m venv /opt/ytvenv && \
-    /opt/ytvenv/bin/pip install --upgrade pip setuptools wheel setuptools-rust
+    /opt/ytvenv/bin/pip install --upgrade pip setuptools wheel
 
-# Cài yt-dlp trước (dễ hơn)
-RUN /opt/ytvenv/bin/pip install --no-cache-dir yt-dlp
-
-# Cài tiktoken (dependency quan trọng)
-RUN /opt/ytvenv/bin/pip install --no-cache-dir tiktoken
-
-# Cài Whisper từ source (tránh wheel issues)
-RUN /opt/ytvenv/bin/pip install --no-cache-dir git+https://github.com/openai/whisper.git
+# Cài Whisper + dependencies
+RUN /opt/ytvenv/bin/pip install --no-cache-dir \
+    torch \
+    torchaudio \
+    openai-whisper \
+    yt-dlp
 
 # Symlinks
 RUN ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp && \
     ln -s /opt/ytvenv/bin/whisper /usr/local/bin/whisper
 
-ENV PATH=/opt/ytvenv/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/opt/ytvenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Cài n8n nodes
+# n8n nodes
 RUN mkdir -p /home/node/.n8n/nodes \
     && cd /home/node/.n8n/nodes \
     && npm init -y \
