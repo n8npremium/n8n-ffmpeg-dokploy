@@ -1,41 +1,22 @@
-# BƯỚC 1: CHỈ ĐỊNH RÕ NỀN TẢNG DEBIAN
-# Thay vì 'latest', chúng ta dùng tag 'debian' để không còn sự nhầm lẫn
-FROM n8nio/n8n:debian
+FROM n8nio/n8n
 
-# Chuyển sang người dùng root để có quyền cài đặt
 USER root
 
-# BƯỚC 2: CÀI ĐẶT CÁC CÔNG CỤ NỀN TẢNG BẰNG apt-get
-# Lệnh này bây giờ sẽ hoạt động vì chúng ta đang ở trong môi trường Debian
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Cài đặt dependencies và tạo virtual environment
+RUN apk add --no-cache ffmpeg python3 py3-pip py3-virtualenv && \
+    python3 -m venv /opt/ytvenv && \
+    /opt/ytvenv/bin/pip install --no-cache-dir yt-dlp openai-whisper faster-whisper && \
+    ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp && \
+    ln -s /opt/ytvenv/bin/whisper /usr/local/bin/whisper
 
-# BƯỚC 3: CÀI ĐẶT CÁC GÓI PYTHON (Giữ nguyên logic gốc của chuyên gia)
-# Giữ nguyên logic sử dụng môi trường ảo (venv) để đảm bảo an toàn
-RUN python3 -m venv /opt/pyvenv \
-    && /opt/pyvenv/bin/pip install --upgrade pip \
-    && /opt/pyvenv/bin/pip install --no-cache-dir \
-        yt-dlp \
-        torch \
-        torchaudio \
-        git+https://github.com/openai/whisper.git \
-    && ln -s /opt/pyvenv/bin/yt-dlp /usr/local/bin/yt-dlp \
-    && ln -s /opt/pyvenv/bin/whisper /usr/local/bin/whisper
+ENV PATH=/opt/ytvenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
-# Giữ nguyên phần cài đặt node n8n tùy chỉnh của bạn
+# Cài đặt n8n nodes
 RUN mkdir -p /home/node/.n8n/nodes \
- && cd /home/node/.n8n/nodes \
- && npm init -y \
- && npm install n8n-nodes-zalo-user-v3
- 
-# Giữ nguyên phần sửa quyền sở hữu
+    && cd /home/node/.n8n/nodes \
+    && npm init -y \
+    && npm install n8n-nodes-zalo-user-v3
+
 RUN chown -R node:node /home/node/.n8n
 
-# Giữ nguyên việc chuyển về người dùng 'node'
 USER node
