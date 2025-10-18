@@ -1,15 +1,44 @@
+# Stage 1: Build dependencies
+FROM n8nio/n8n AS builder
+
+USER root
+
+# Cài đặt build dependencies
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    py3-pip \
+    py3-virtualenv \
+    build-base \
+    python3-dev \
+    libffi-dev
+
+# Tạo venv và cài packages
+RUN python3 -m venv /opt/ytvenv && \
+    /opt/ytvenv/bin/pip install --upgrade pip && \
+    /opt/ytvenv/bin/pip install --no-cache-dir \
+        yt-dlp \
+        faster-whisper
+
+# Stage 2: Final image
 FROM n8nio/n8n
 
 USER root
 
-# Cài đặt dependencies và tạo virtual environment
-RUN apk add --no-cache ffmpeg python3 py3-pip py3-virtualenv && \
-    python3 -m venv /opt/ytvenv && \
-    /opt/ytvenv/bin/pip install --no-cache-dir yt-dlp openai-whisper faster-whisper && \
-    ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp && \
-    ln -s /opt/ytvenv/bin/whisper /usr/local/bin/whisper
+# Chỉ cài runtime dependencies (không cần build tools)
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    libstdc++ \
+    libgomp
 
-ENV PATH=/opt/ytvenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+# Copy venv từ builder stage
+COPY --from=builder /opt/ytvenv /opt/ytvenv
+
+# Tạo symlinks
+RUN ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp
+
+ENV PATH=/opt/ytvenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Cài đặt n8n nodes
 RUN mkdir -p /home/node/.n8n/nodes \
