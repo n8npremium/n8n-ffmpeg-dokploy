@@ -1,12 +1,12 @@
-# BƯỚC 1: THAY ĐỔI NỀN TẢNG
-# Bắt đầu từ image n8n chính thức (dựa trên Debian, tương thích với torch)
-FROM n8nio/n8n:latest
+# BƯỚC 1: CHỈ ĐỊNH RÕ NỀN TẢNG DEBIAN
+# Thay vì 'latest', chúng ta dùng tag 'debian' để không còn sự nhầm lẫn
+FROM n8nio/n8n:debian
 
 # Chuyển sang người dùng root để có quyền cài đặt
 USER root
 
-# BƯỚC 2: "DỊCH" LỆNH CÀI ĐẶT SANG apt-get
-# Cài đặt các công cụ nền tảng bằng apt-get (công cụ của Debian)
+# BƯỚC 2: CÀI ĐẶT CÁC CÔNG CỤ NỀN TẢNG BẰNG apt-get
+# Lệnh này bây giờ sẽ hoạt động vì chúng ta đang ở trong môi trường Debian
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     python3 \
