@@ -1,20 +1,27 @@
-# Bắt đầu từ image n8n chính thức (nền tảng Alpine đã được xác nhận)
 FROM n8nio/n8n
 
-# Chuyển sang người dùng root để có quyền cài đặt
 USER root
 
-# Nâng cấp lệnh RUN gốc để thêm 'git', sau đó cài đặt cả 'yt-dlp' và 'whisper' vào cùng môi trường ảo
+# Nâng cấp lệnh RUN để thêm các công cụ build, sau đó dọn dẹp chúng
 RUN apk add --no-cache \
+        # Các công cụ cũ
         ffmpeg \
         python3 \
         py3-pip \
         py3-virtualenv \
         git \
+        # THÊM MỚI: "Bộ dụng cụ" để build
+        build-base \
+        python3-dev \
+    # Bắt đầu quá trình cài đặt (giữ nguyên logic gốc)
     && python3 -m venv /opt/ytvenv \
+    && /opt/ytvenv/bin/pip install --upgrade pip \
     && /opt/ytvenv/bin/pip install --no-cache-dir \
         yt-dlp \
         git+https://github.com/openai/whisper.git \
+    # Dọn dẹp "bộ dụng cụ" sau khi đã cài đặt xong để giảm kích thước image
+    && apk del build-base python3-dev \
+    # Tạo lối tắt (giữ nguyên logic gốc)
     && ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp \
     && ln -s /opt/ytvenv/bin/whisper /usr/local/bin/whisper
 
