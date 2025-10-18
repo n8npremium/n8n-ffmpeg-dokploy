@@ -2,7 +2,7 @@ FROM n8nio/n8n
 
 USER root
 
-# Cài đặt essentials cho Alpine
+# Cài đặt essentials
 RUN apk add --no-cache \
     curl \
     bash \
@@ -15,22 +15,26 @@ RUN apk add --no-cache \
     libffi-dev \
     openssl-dev \
     git \
-    linux-headers
+    linux-headers \
+    musl-dev
 
-# Cài Rust từ rustup (không dùng cargo từ apk)
+# Cài Rust từ rustup
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 
-# Source Rust environment
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Cài venv
+# Cài venv + upgrade pip
 RUN python3 -m venv /opt/ytvenv && \
     /opt/ytvenv/bin/pip install --upgrade pip setuptools wheel setuptools-rust
 
-# Cài Whisper + yt-dlp
-RUN /opt/ytvenv/bin/pip install --no-cache-dir \
-    yt-dlp \
-    openai-whisper
+# Cài yt-dlp trước (dễ hơn)
+RUN /opt/ytvenv/bin/pip install --no-cache-dir yt-dlp
+
+# Cài tiktoken (dependency quan trọng)
+RUN /opt/ytvenv/bin/pip install --no-cache-dir tiktoken
+
+# Cài Whisper từ source (tránh wheel issues)
+RUN /opt/ytvenv/bin/pip install --no-cache-dir git+https://github.com/openai/whisper.git
 
 # Symlinks
 RUN ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp && \
