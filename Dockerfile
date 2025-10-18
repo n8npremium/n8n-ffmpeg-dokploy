@@ -1,46 +1,41 @@
-# Stage 1: Build dependencies
-FROM n8nio/n8n AS builder
+FROM node:18-bullseye
 
-USER root
-
-# Cài đặt build dependencies
-RUN apk add --no-cache \
+# Cài đặt ffmpeg, python, build tools
+RUN apt-get update && apt-get install -y \
     ffmpeg \
     python3 \
-    py3-pip \
-    py3-virtualenv \
-    build-base \
+    python3-venv \
+    python3-pip \
     python3-dev \
-    libffi-dev
+    build-essential \
+    rustc \
+    cargo \
+    git \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Tạo venv và cài packages
+# Tạo user node
+RUN useradd -m -s /bin/bash node && \
+    mkdir -p /home/node/.n8n && \
+    chown -R node:node /home/node
+
+# Tạo venv cho faster-whisper
 RUN python3 -m venv /opt/ytvenv && \
-    /opt/ytvenv/bin/pip install --upgrade pip && \
-    /opt/ytvenv/bin/pip install --no-cache-dir \
-        yt-dlp \
-        faster-whisper
+    /opt/ytvenv/bin/pip install --upgrade pip setuptools wheel
 
-# Stage 2: Final image
-FROM n8nio/n8n
+# Cài yt-dlp và faster-whisper
+RUN /opt/ytvenv/bin/pip install --no-cache-dir \
+    yt-dlp \
+    faster-whisper \
+    pydub
 
-USER root
-
-# Chỉ cài runtime dependencies (không cần build tools)
-RUN apk add --no-cache \
-    ffmpeg \
-    python3 \
-    libstdc++ \
-    libgomp
-
-# Copy venv từ builder stage
-COPY --from=builder /opt/ytvenv /opt/ytvenv
-
-# Tạo symlinks
+# Tạo symlink
 RUN ln -s /opt/ytvenv/bin/yt-dlp /usr/local/bin/yt-dlp
 
 ENV PATH=/opt/ytvenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Cài đặt n8n nodes
+# Cài npm packages cho n8n
 RUN mkdir -p /home/node/.n8n/nodes \
     && cd /home/node/.n8n/nodes \
     && npm init -y \
@@ -48,4 +43,12 @@ RUN mkdir -p /home/node/.n8n/nodes \
 
 RUN chown -R node:node /home/node/.n8n
 
+# Cài n8n globally
+RUN npm install -g n8n
+
 USER node
+WORKDIR /home/node
+
+EXPOSE 5678
+
+CMD ["n8n"]
